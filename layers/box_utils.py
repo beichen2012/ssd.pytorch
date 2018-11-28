@@ -86,28 +86,51 @@ def match(threshold, truths, priors, variances, labels, loc_t, conf_t, idx):
         The matched indices corresponding to 1)location and 2)confidence preds.
     """
     # jaccard index
+    # 假设truths的shape是 M * 4， 一个图片上有M个直值框
+    # 则overlaps的shape是： M * 8732
     overlaps = jaccard(
         truths,
         point_form(priors)
     )
     # (Bipartite Matching)
     # [1,num_objects] best prior for each ground truth
+    # dim=1,即求8732个里面的最大值，故输出shape为： M,1
+    # 也就是说：对于每一个truth box,匹配一个最高得分的 prior box
     best_prior_overlap, best_prior_idx = overlaps.max(1, keepdim=True)
-    # [1,num_priors] best ground truth for each prior
-    best_truth_overlap, best_truth_idx = overlaps.max(0, keepdim=True)
-    best_truth_idx.squeeze_(0)
-    best_truth_overlap.squeeze_(0)
+    # shape: (M)
     best_prior_idx.squeeze_(1)
     best_prior_overlap.squeeze_(1)
+
+    # [1,num_priors] best ground truth for each prior
+    # dim = 0, 即求M个里面的最大值， 故输出shape为： 1,8732
+    # 也就是说： 对于每一个prior box,都给它指派一个得分最高的truth box
+    best_truth_overlap, best_truth_idx = overlaps.max(0, keepdim=True)
+    # shape: (8732)
+    best_truth_idx.squeeze_(0)
+    best_truth_overlap.squeeze_(0)
+
+
+    # best_prior_idx放置的是M个truth box对应的Prior box的索引位置（M个truth box是按顺序放置的）
+    # M个truth box 对应的prior box的overlap置为2（一个较大的值）
     best_truth_overlap.index_fill_(0, best_prior_idx, 2)  # ensure best prior
+
     # TODO refactor: index  best_prior_idx with long tensor
     # ensure every gt matches with its prior of max overlap
+    # best_truth_idx放置的是8732个prior box对应的M个truth box的索引的位置
+    # 结合（每个真值框对应一个priorbox），将该priorbox对应的truth box
     for j in range(best_prior_idx.size(0)):
         best_truth_idx[best_prior_idx[j]] = j
+    # best_truth_idx的shape是 （8732）
+    # matches即 是将truths广播成： 8732,4
+    # 每一行就是对应行Prior box的真值框
     matches = truths[best_truth_idx]          # Shape: [num_priors,4]
+    # conf同matches,shape为： (8732),每一行为一个标签值（这里为何要加个1） -> 因为在制作label索引时，没有索引背影（参见：voc0712.py）
     conf = labels[best_truth_idx] + 1         # Shape: [num_priors]
+    # 交并比小于0.5的priorbox对应的label(conf)，置为0（背景）
     conf[best_truth_overlap < threshold] = 0  # label as background
+    # 将真值框与Priorbox 做一个编码（类似于smooth l1, 但是加入了variances的影响）
     loc = encode(matches, priors, variances)
+    # 填充输出（按batch size 维度填充）
     loc_t[idx] = loc    # [num_priors,4] encoded offsets to learn
     conf_t[idx] = conf  # [num_priors] top class label for each prior
 
@@ -124,6 +147,18 @@ def encode(matched, priors, variances):
     Return:
         encoded boxes (tensor), Shape: [num_priors, 4]
     """
+
+    '''
+    // Encode variance in bbox.
+    encode_bbox->set_xmin(
+      (bbox_center_x - prior_center_x) / prior_width / prior_variance[0]);
+    encode_bbox->set_ymin(
+      (bbox_center_y - prior_center_y) / prior_height / prior_variance[1]);
+    encode_bbox->set_xmax(
+      log(bbox_width / prior_width) / prior_variance[2]);
+    encode_bbox->set_ymax(
+      log(bbox_height / prior_height) / prior_variance[3]);
+    '''
 
     # dist b/t match center and prior's center
     g_cxcy = (matched[:, :2] + matched[:, 2:])/2 - priors[:, :2]
