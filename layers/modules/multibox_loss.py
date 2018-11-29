@@ -32,9 +32,9 @@ class MultiBoxLoss(nn.Module):
 
     def __init__(self, num_classes, overlap_thresh, prior_for_matching,
                  bkg_label, neg_mining, neg_pos, neg_overlap, encode_target,
-                 use_gpu=True):
+                 device):
         super(MultiBoxLoss, self).__init__()
-        self.use_gpu = use_gpu
+        self.device = device
         self.num_classes = num_classes
         self.threshold = overlap_thresh
         self.background_label = bkg_label
@@ -80,9 +80,11 @@ class MultiBoxLoss(nn.Module):
             # 根据交并比，将真值框与Priorbox匹配起来
             match(self.threshold, truths, defaults, self.variance, labels,
                   loc_t, conf_t, idx)
-        if self.use_gpu:
-            loc_t = loc_t.cuda()
-            conf_t = conf_t.cuda()
+        loc_t = loc_t.to(self.device)
+        conf_t = conf_t.to(self.device)
+        # if self.use_gpu:
+        #     loc_t = loc_t.cuda()
+        #     conf_t = conf_t.cuda()
         # wrap targets
         # loc_t（真值）放置的是8732个 priorbox与其对应的truthbox编码过的bbox： N，8732，4
         # conf_t（真值）放置的是label (里面除0标签外，其他标签加了个1）： （N，8732）
