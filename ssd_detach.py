@@ -18,33 +18,49 @@ class SSDVGG16(nn.Module):
 
         # vgg base network
         self.vgg_conv1 = nn.Sequential(nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(64),
                                        nn.ReLU(),
                                        nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
                                        nn.ReLU())
         self.vgg_conv2 = nn.Sequential(nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(128),
                                        nn.ReLU(),
                                        nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(128),
                                        nn.ReLU())
         self.vgg_conv3 = nn.Sequential(nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(256),
                                        nn.ReLU(),
                                        nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(256),
                                        nn.ReLU(),
                                        nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(256),
                                        nn.ReLU())
         self.vgg_conv4 = nn.Sequential(nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(512),
                                        nn.ReLU(),
                                        nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(512),
                                        nn.ReLU(),
                                        nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(512),
                                        nn.ReLU())
         self.vgg_conv5 = nn.Sequential(nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(512),
                                        nn.ReLU(),
                                        nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(512),
                                        nn.ReLU(),
                                        nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+                                       nn.BatchNorm2d(512),
                                        nn.ReLU())
-        self.fc6 = nn.Conv2d(512, 1024, kernel_size=3, stride=1, padding=6, dilation=6)
-        self.fc7 = nn.Conv2d(1024, 1024, kernel_size=1, stride=1, padding=0)
+        self.fc6 = nn.Sequential(nn.Conv2d(512, 1024, kernel_size=3, stride=1, padding=6, dilation=6),
+                                 nn.BatchNorm2d(1024),
+                                 nn.ReLU())
+        self.fc7 = nn.Sequential(nn.Conv2d(1024, 1024, kernel_size=1, stride=1, padding=0),
+                                 nn.BatchNorm2d(1024),
+                                 nn.ReLU())
         self.max_pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.max_pool2 = nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True)
         self.max_pool3 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
@@ -52,20 +68,28 @@ class SSDVGG16(nn.Module):
 
         # extra
         self.conv6 = nn.Sequential(nn.Conv2d(1024, 256, kernel_size=1, stride=1, padding=0),
+                                   nn.BatchNorm2d(256),
                                    nn.ReLU(),
                                    nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=1),
+                                   nn.BatchNorm2d(512),
                                    nn.ReLU())
         self.conv7 = nn.Sequential(nn.Conv2d(512, 128, kernel_size=1, stride=1, padding=0),
+                                   nn.BatchNorm2d(128),
                                    nn.ReLU(),
                                    nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),
+                                   nn.BatchNorm2d(256),
                                    nn.ReLU())
         self.conv8 = nn.Sequential(nn.Conv2d(256, 128, kernel_size=1, stride=1, padding=0),
+                                   nn.BatchNorm2d(128),
                                    nn.ReLU(),
                                    nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=0),
+                                   nn.BatchNorm2d(256),
                                    nn.ReLU())
         self.conv9 = nn.Sequential(nn.Conv2d(256, 128, kernel_size=1, stride=1, padding=0),
+                                   nn.BatchNorm2d(128),
                                    nn.ReLU(),
                                    nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=0),
+                                   nn.BatchNorm2d(256),
                                    nn.ReLU())
 
         # loc and conf
@@ -113,9 +137,9 @@ class SSDVGG16(nn.Module):
         x = self.max_pool3(x)
 
         # fc6
-        x = self.relu(self.fc6(x))
+        x = self.fc6(x)
         # fc7
-        x = self.relu(self.fc7(x))
+        x = self.fc7(x)
         sources += [x]
 
         # extra

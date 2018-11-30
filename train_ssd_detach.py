@@ -32,8 +32,8 @@ base_lr = 0.01
 momentum = 0.9
 gamma = 0.1
 weight_decay = 0.0005
-stepsize = [5000, 50000, 100000, 120000, 140000]
-max_iter = 150000
+stepsize = [3000, 80000, 130000, 170000, 190000]
+max_iter = 200000
 
 save_interval = 10000
 
@@ -41,7 +41,7 @@ save_dir = "./models"
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
 save_prefix = save_dir + "/vgg16_ssd_detach_20181130"
-DATASET_ROOT = "/home/wyj/dataset/VOCdevkit"
+DATASET_ROOT = "/homec/wyj/dataset/VOCdevkit"
 
 # data loader
 def _worker_init_fn_():
@@ -111,6 +111,9 @@ def train():
             loss_l, loss_c = criterion((loc, conf, priorboxes), targets)
             loss = loss_l + loss_c
             loss.backward()
+            # clip grad
+            torch.nn.utils.clip_grad_norm_(net.parameters(), 20.0)
+            # optimize
             optimizer.step()
             scheduler.step()
 
