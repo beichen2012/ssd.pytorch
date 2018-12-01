@@ -18,7 +18,9 @@ import random
 from shufflenetv2_ssd_detach import *
 from utils import Logger
 # from utils import make_dot
-log = Logger("{}.log".format(__file__.split('/')[-1], level='debug')).logger
+if not os.path.exists("./log"):
+    os.mkdir("./log")
+log = Logger("./log/{}.log".format(__file__.split('/')[-1], level='debug')).logger
 
 USE_CUDA = True
 GPU_ID = [0]
@@ -27,22 +29,23 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in GPU_ID])
 device = torch.device("cuda" if torch.cuda.is_available() and USE_CUDA else "cpu")
 
 train_batch = 32
-display = 10
+display = 20
 
 base_lr = 0.01
 momentum = 0.9
 gamma = 0.1
 weight_decay = 0.0005
-stepsize = [5000, 50000, 100000, 120000, 140000]
-max_iter = 150000
+stepsize = [80000, 150000, 180000, 200000, 220000]
+max_iter = 230000
 
 save_interval = 10000
 
 save_dir = "./models"
 if not os.path.exists(save_dir):
     os.mkdir(save_dir)
-save_prefix = save_dir + "/shufflenetv2_ssd_detach_20181126"
-DATASET_ROOT = "/home/beichen2012/dataset/VOCdevkit"
+save_prefix = save_dir + "/shufflenetv2_ssd_detach_20181201"
+DATASET_ROOT = "~/dataset/VOCdevkit"
+DATASET_ROOT = os.path.expanduser(DATASET_ROOT)
 
 # data loader
 def _worker_init_fn_():
@@ -112,6 +115,7 @@ def train():
             loss_l, loss_c = criterion((loc, conf, priorboxes), targets)
             loss = loss_l + loss_c
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(net.parameters(), 20.0)
             optimizer.step()
             scheduler.step()
 
@@ -120,7 +124,7 @@ def train():
             conf_loss += loss_c.item()
 
             if k % display == 0:
-                log.info("iter: {}, lr: {:.4f}, loss is: {:.4f}, loss_loc is: {:.4f}, loss_conf is: {:.4f}, time per iter: {:.4f} s".format(
+                log.info("iter: {}, lr: {}, loss is: {:.4f}, loss_loc is: {:.4f}, loss_conf is: {:.4f}, time per iter: {:.4f} s".format(
                     k,
                     optimizer.param_groups[0]['lr'],
                     loss.item(),
